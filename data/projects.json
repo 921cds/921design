@@ -1,0 +1,165 @@
+{
+  "site": {
+    "about": "Studio Choi는 서울을 기반으로 활동하는 독립 디자인 스튜디오입니다. 브랜드 아이덴티티, 편집, 사인 시스템, 디지털 경험을 하나의 언어로 묶어, 클라이언트가 가진 생각을 가장 분명한 형태로 만듭니다.",
+    "address": "대전광역시 서구 둔산대로 117번길 44 엑스포텔 911호",
+    "disciplines": [
+      "Identity",
+      "Editorial",
+      "Environment",
+      "Digital",
+      "Packaging"
+    ],
+    "email": "hello@studiochoi.kr",
+    "instagram": "https://instagram.com/",
+    "name": "921design",
+    "phone": "+82 2 000 0000",
+    "tagline": "We design identities, books, spaces and screens for people with something to say.",
+    "taglineKo": "말하고 싶은 것이 있는 사람들을 위해 아이덴티티, 책, 공간, 화면을 디자인합니다."
+  },
+  "projects": [
+    {
+      "client": "한강타이포그래피페스티벌",
+      "color": "#ff4b1f",
+      "cover": "",
+      "description": "축제 기간 7일 동안 매일 다른 너비로 늘어나는 가변 글꼴 아이덴티티. 포스터, 배너, 굿즈까지 하나의 글꼴 축으로 움직입니다.",
+      "disciplines": [
+        "Identity",
+        "Editorial"
+      ],
+      "hidden": false,
+      "images": [],
+      "ink": "#000000",
+      "mark": "Aa",
+      "size": "normal",
+      "slug": "hangang-type-festival",
+      "summary": "강의 흐름처럼 늘어나는 가변 글꼴 포스터 시리즈",
+      "title": "Hangang Type Festival",
+      "year": 2026
+    },
+    {
+      "client": "서울근대건축아카이브",
+      "color": "#E8E3D9",
+      "cover": "",
+      "description": "1920–70년대 서울 건축 도면 1만 2천 장을 공개하는 아카이브의 아이덴티티와 전시 사인 시스템. 도면 용지의 5mm 격자를 그대로 로고와 레이아웃의 단위로 삼았습니다.",
+      "disciplines": [
+        "Identity",
+        "Environment"
+      ],
+      "images": [],
+      "ink": "#111111",
+      "mark": "SMA",
+      "size": "large",
+      "slug": "seoul-modern-archive",
+      "summary": "근대 건축 도면의 격자에서 출발한 아카이브 아이덴티티",
+      "title": "Seoul Modern Archive",
+      "year": 2026
+    },
+    {
+      "client": "온도 티하우스",
+      "color": "#2F4A3A",
+      "cover": "",
+      "description": "찻잎마다 권장하는 우림 온도를 패키지의 중심 정보로 올린 리브랜딩. 70°부터 95°까지 다섯 가지 색 체계를 만들었습니다.",
+      "disciplines": [
+        "Packaging",
+        "Identity"
+      ],
+      "images": [],
+      "ink": "#F2EFE6",
+      "mark": "온도",
+      "size": "normal",
+      "slug": "ondo-tea",
+      "summary": "우리는 온도로 차를 고른다",
+      "title": "Ondo Tea",
+      "year": 2025
+    },
+    {
+      "client": "페이퍼 쿼털리",
+      "color": "#F5F5F0",
+      "cover": "",
+      "description": "종이 산업을 다루는 계간지의 편집 디자인. 매 호마다 표지 용지를 바꾸고, 판형과 그리드는 고정해 시리즈의 일관성을 지켰습니다.",
+      "disciplines": [
+        "Editorial"
+      ],
+      "images": [],
+      "ink": "#1A1A1A",
+      "mark": "PQ",
+      "size": "normal",
+      "slug": "paper-quarterly",
+      "summary": "종이에 대한 계간지, 매호 다른 종이로",
+      "title": "Paper Quarterly",
+      "year": 2025
+    },
+    {
+      "client": "서울시메트로9호선",
+      "color": "#BDA16B",
+      "cover": "",
+      "description": "급행과 일반 열차가 섞이는 9호선 역사의 사인 체계 재설계. 색보다 숫자와 방향 화살표를 크게 써서 처음 온 사람도 3초 안에 방향을 잡도록 했습니다.",
+      "disciplines": [
+        "Environment"
+      ],
+      "images": [],
+      "ink": "#0E0E0E",
+      "mark": "9",
+      "size": "large",
+      "slug": "line-9-wayfinding",
+      "summary": "환승 동선을 30% 줄인 역사 사인 시스템",
+      "title": "Line 9 Wayfinding",
+      "year": 2024
+    },
+    {
+      "client": "모아 (가계부 앱)",
+      "color": "#3B3BFF",
+      "cover": "",
+      "description": "숫자 대신 쌓이는 막대로 지출을 보여주는 가계부 앱의 브랜드와 UI. 아이콘, 모션, 앱스토어 그래픽까지 함께 작업했습니다.",
+      "disciplines": [
+        "Digital",
+        "Identity"
+      ],
+      "images": [],
+      "ink": "#FFFFFF",
+      "mark": "₩",
+      "size": "normal",
+      "slug": "moa-app",
+      "summary": "돈을 세지 않고 모으는 가계부",
+      "title": "Moa",
+      "year": 2024
+    },
+    {
+      "client": "부산바다미술제",
+      "color": "#0A2540",
+      "cover": "",
+      "description": "행사 기간의 실제 조수 간만 데이터를 매일의 포스터 파형으로 그렸습니다. 도록, 현장 사인, 웹사이트에 같은 데이터가 이어집니다.",
+      "disciplines": [
+        "Identity",
+        "Environment",
+        "Editorial"
+      ],
+      "images": [],
+      "ink": "#9FE3FF",
+      "mark": "~",
+      "size": "normal",
+      "slug": "busan-biennale-2024",
+      "summary": "조수 간만표를 그래픽으로 옮긴 비엔날레",
+      "title": "Busan Sea Biennale",
+      "year": 2024
+    },
+    {
+      "client": "남산제과",
+      "color": "#F2C230",
+      "cover": "",
+      "description": "3대째 이어온 제과점의 옛 간판 글씨를 복원해 로고타입으로 만들고, 포장지와 매장 사인에 적용했습니다.",
+      "disciplines": [
+        "Packaging",
+        "Environment"
+      ],
+      "images": [],
+      "ink": "#2B1A0E",
+      "mark": "南",
+      "size": "normal",
+      "slug": "namsan-bakery",
+      "summary": "1968년 간판 글씨를 되살린 동네 제과점",
+      "title": "Namsan Bakery",
+      "year": 2023
+    }
+  ]
+}
