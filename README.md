@@ -22,6 +22,19 @@ homepage/
 
 저장하면 사이트에 바로 반영됩니다. 편집 권한이 있는 사람에게만 관리 메뉴가 보이고, 다른 방문자는 보기만 할 수 있습니다.
 
+## 배포 사이트 관리자 (GitHub Pages)
+
+https://921cds.github.io/921design/#admin 에서 같은 관리 화면을 씁니다. 저장하면 이 저장소의 `data/projects.json`과 `images/` 폴더에 바로 커밋되고, 1~2분 뒤 사이트에 반영됩니다.
+
+처음 한 번만 GitHub 토큰을 만들어 로그인합니다.
+
+1. https://github.com/settings/personal-access-tokens/new 에서 새 토큰을 만듭니다.
+2. Repository access: **Only select repositories → 921design**
+3. Permissions → Repository permissions → **Contents: Read and write**
+4. 만든 토큰(`github_pat_…`)을 관리 화면에 붙여 넣고 로그인합니다.
+
+토큰은 그 브라우저에만 저장되고, 로그아웃하면 지워집니다. 다른 컴퓨터에서는 같은 토큰을 다시 넣으면 됩니다. 큰 사진은 올릴 때 긴 변 2400px로 자동으로 줄어듭니다.
+
 ## 파일로 직접 관리 (직접 호스팅할 때)
 
 아래는 관리자 페이지 없이 `data/projects.json`을 직접 고치는 방법입니다. 관리자 페이지에서 고친 내용은 백업 탭에서 이 파일로 받아 쓸 수 있습니다.
