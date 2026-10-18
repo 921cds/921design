@@ -483,7 +483,7 @@ img { max-width: 100%; display: block; }
   }
   function isAssetId(v) { return typeof v === "string" && /^[0-9a-f]{32}$/.test(v); }
   function imgSrc(v) {
-    if (state.gh && state.gh.local[v]) return state.gh.local[v];
+    if (state.remote && state.remote.local[v]) return state.remote.local[v];
     return isAssetId(v) ? "/_blob/" + v : v;
   }
   function clone(o) { return JSON.parse(JSON.stringify(o || {})); }
@@ -609,10 +609,13 @@ img { max-width: 100%; display: block; }
   function renderAdmin() {
     if ($("admin").hidden) return;
     var body = $("admin-body");
-    var head = '<h1>포트폴리오 관리</h1><p class="lead">' + (state.ghMode
-      ? "저장하면 GitHub 저장소에 바로 기록되고, 1~2분 뒤 사이트에 반영됩니다." + (state.gh ? ' <button class="btn" type="button" data-act="gh-logout" style="margin-left:8px">로그아웃</button>' : "")
-      : "여기서 바꾼 내용은 저장 즉시 사이트에 반영됩니다.") + "</p>";
-    if (state.ghMode && !state.gh) { body.innerHTML = head + ghLoginHTML(); return; }
+    var kind = state.remoteKind;
+    var head = '<h1>포트폴리오 관리</h1><p class="lead">' + (kind === "github"
+      ? "저장하면 GitHub 저장소에 바로 기록되고, 1~2분 뒤 사이트에 반영됩니다."
+      : "여기서 바꾼 내용은 저장 즉시 사이트에 반영됩니다.") +
+      (state.remote ? ' <button class="btn" type="button" data-act="logout" style="margin-left:8px">로그아웃</button>' : "") + "</p>";
+    if (kind === "checking") { body.innerHTML = head + '<p class="notice">관리 방식을 확인하는 중입니다.</p>'; return; }
+    if (kind && !state.remote) { body.innerHTML = head + loginHTML(); return; }
     if (!state.userKnown) { body.innerHTML = head + '<p class="notice">권한을 확인하는 중입니다.</p>'; return; }
     if (!state.canEdit) {
       body.innerHTML = head + '<p class="notice">편집 권한이 있는 사람만 포트폴리오를 관리할 수 있습니다.</p>';
@@ -931,7 +934,7 @@ img { max-width: 100%; display: block; }
       try { await state.downloads.save({ filename: "projects.json", data: exportJSON() }); }
       catch (err) { toast("내려받지 못했습니다. JSON 복사를 이용해 주세요."); }
     }
-    else if (act === "gh-logout") { ghSave(""); location.reload(); }
+    else if (act === "logout") { remoteLogout().then(function () { location.reload(); }); }
     else if (act === "copy-json") {
       var text = exportJSON();
       try { await navigator.clipboard.writeText(text); toast("JSON을 복사했습니다."); }
@@ -940,14 +943,14 @@ img { max-width: 100%; display: block; }
   });
   $("admin-body").addEventListener("submit", function (ev) {
     if (ev.target.id === "sform") { ev.preventDefault(); saveSite(); }
-    if (ev.target.id === "ghform") {
+    if (ev.target.id === "loginform") {
       ev.preventDefault();
-      var token = $("gh-token").value.trim(), btn = $("gh-login");
-      if (!token) { $("gh-token").focus(); return; }
-      btn.disabled = true; $("gh-error").textContent = "";
-      ghLogin(token).then(function () { ghSave(token); toast("로그인했습니다."); }, function (err) {
+      var secret = $("login-secret").value.trim(), btn = $("login-btn");
+      if (!secret) { $("login-secret").focus(); return; }
+      btn.disabled = true; $("login-error").textContent = "";
+      remoteLogin(secret).then(function () { toast("로그인했습니다."); }, function (err) {
         btn.disabled = false;
-        $("gh-error").textContent = ghErrorText(err);
+        $("login-error").textContent = loginErrorText(err);
       });
     }
   });
@@ -983,9 +986,11 @@ img { max-width: 100%; display: block; }
     if (!state.editing) renderAdmin();
   }
 
-  /* ---------- GitHub backend (when hosted on GitHub Pages) ---------- */
-  // Outside the Claude preview there is no shared store, so the admin commits data/projects.json
-  // and uploaded images straight to the repository, using a token the editor pastes in once.
+  /* ---------- Self-hosted admin (GitHub Pages or a PHP host such as Cafe24) ---------- */
+  // Outside the Claude preview there is no shared store. On a PHP host, admin/api.php saves
+  // data/projects.json and images on the server behind a password; on GitHub Pages the admin
+  // commits them to the repository with a token the editor pastes in once.
+  var API_URL = "admin/api.php";
   var GH_REPO = (function () {
     var m = location.hostname.match(/^([^.]+)\.github\.io$/i);
     var seg = location.pathname.split("/").filter(Boolean)[0];
@@ -1004,23 +1009,32 @@ img { max-width: 100%; display: block; }
     for (var i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);
     return new TextDecoder().decode(u);
   }
-  function ghErrorText(err) {
+  function loginErrorText(err) {
     var st = err && err.status;
+    if (state.remoteKind === "php") {
+      if (err && err.code === "not_configured") return "admin/config.php에 비밀번호가 아직 정해지지 않았습니다. README의 카페24 안내를 참고해 주세요.";
+      if (st === 401) return "비밀번호가 맞지 않습니다.";
+      if (st === 429) return "여러 번 틀려서 잠시 막혔습니다. 몇 분 뒤 다시 시도해 주세요.";
+      return "서버에 연결하지 못했습니다. 잠시 뒤 다시 시도해 주세요.";
+    }
     if (st === 401) return "토큰이 맞지 않거나 만료되었습니다. 새 토큰을 만들어 다시 넣어 주세요.";
     if (st === 403 || st === 404) return GH_REPO.owner + "/" + GH_REPO.repo + " 저장소에 쓸 권한이 없는 토큰입니다. Contents 권한을 Read and write로 주었는지 확인해 주세요.";
     return "GitHub에 연결하지 못했습니다. 잠시 뒤 다시 시도해 주세요.";
   }
-  function ghLoginHTML() {
-    return '<form class="form" id="ghform" novalidate>' +
-      '<div class="field full"><p class="notice" style="margin:0">GitHub 토큰으로 로그인하면 이 화면에서 바로 저장소(' + esc(GH_REPO.owner + "/" + GH_REPO.repo) + ')에 저장합니다. ' +
+  function loginHTML() {
+    var intro = state.remoteKind === "php"
+      ? '<p class="notice" style="margin:0">관리자 비밀번호로 로그인하면 이 화면에서 바로 사이트에 저장합니다.</p>'
+      : '<p class="notice" style="margin:0">GitHub 토큰으로 로그인하면 이 화면에서 바로 저장소(' + esc(GH_REPO.owner + "/" + GH_REPO.repo) + ')에 저장합니다. ' +
         '토큰은 이 브라우저에만 보관됩니다.<br><br>처음 한 번만: <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener" style="text-decoration:underline">토큰 만들기 ↗</a>에서 ' +
-        'Repository access를 <b>Only select repositories → ' + esc(GH_REPO.repo) + '</b>로, Permissions의 <b>Contents</b>를 <b>Read and write</b>로 정하고 만든 토큰을 아래에 붙여 넣으세요.</p></div>' +
-      field("gh-token", "GitHub 토큰", "", { type: "password", full: true, placeholder: "github_pat_…" }) +
-      '<div class="form-actions"><div><span class="hint" id="gh-error" role="alert" style="color:#ff5a4e"></span></div>' +
-        '<div><button class="btn primary" type="submit" id="gh-login">로그인</button></div></div>' +
+        'Repository access를 <b>Only select repositories → ' + esc(GH_REPO.repo) + '</b>로, Permissions의 <b>Contents</b>를 <b>Read and write</b>로 정하고 만든 토큰을 아래에 붙여 넣으세요.</p>';
+    return '<form class="form" id="loginform" novalidate>' +
+      '<div class="field full">' + intro + "</div>" +
+      field("login-secret", state.remoteKind === "php" ? "비밀번호" : "GitHub 토큰", "", { type: "password", full: true, placeholder: state.remoteKind === "php" ? "" : "github_pat_…" }) +
+      '<div class="form-actions"><div><span class="hint" id="login-error" role="alert" style="color:#ff5a4e"></span></div>' +
+        '<div><button class="btn primary" type="submit" id="login-btn">로그인</button></div></div>' +
       "</form>";
   }
-  // Large photos are scaled down before upload so the repository and the page stay light.
+  // Large photos are scaled down before upload so the site stays light.
   function shrink(file) {
     if (!/^image\/(jpeg|png|webp)$/.test(file.type) || !window.createImageBitmap) return Promise.resolve(file);
     return createImageBitmap(file).then(function (bmp) {
@@ -1033,44 +1047,26 @@ img { max-width: 100%; display: block; }
       return new Promise(function (resolve) { c.toBlob(function (b) { resolve(b && b.size < file.size ? b : file); }, type, 0.86); });
     }, function () { return file; });
   }
-  function makeGitHub(token) {
-    var api = "https://api.github.com/repos/" + GH_REPO.owner + "/" + GH_REPO.repo;
-    var gh = { token: token, branch: "", local: {}, queue: Promise.resolve(), pending: null };
-    gh.req = function (method, path, body) {
-      return fetch(api + path, {
-        method: method, cache: "no-store",
-        headers: { Authorization: "Bearer " + gh.token, Accept: "application/vnd.github+json" },
-        body: body ? JSON.stringify(body) : undefined
-      }).then(function (r) {
-        if (!r.ok) { var e = new Error("GitHub " + r.status); e.status = r.status; throw e; }
-        return r.status === 204 ? null : r.json();
-      });
-    };
-    // One write at a time, so two commits never race for the branch head.
-    gh.serial = function (fn) { var p = gh.queue.then(fn); gh.queue = p.catch(function () {}); return p; };
-    gh.putFile = function (path, b64, message) {
-      return gh.serial(function () {
-        return gh.req("GET", "/contents/" + path + "?ref=" + encodeURIComponent(gh.branch))
-          .then(function (f) { return f.sha; }, function (e) { if (e.status === 404) return undefined; throw e; })
-          .then(function (sha) { return gh.req("PUT", "/contents/" + path, { message: message, content: b64, branch: gh.branch, sha: sha }); });
-      });
-    };
-    // Edits made close together (like a reorder) land in one commit of the whole file.
-    gh.commitData = function () {
-      if (!gh.pending) {
-        gh.pending = new Promise(function (resolve, reject) {
-          setTimeout(function () {
-            gh.pending = null;
-            var text = exportJSON() + "\n";
-            gh.putFile(DATA_URL, toB64(new TextEncoder().encode(text)), "Update portfolio from admin").then(resolve, reject);
-          }, 400);
+  function imageName(file, blob) {
+    var ext = blob.type === "image/png" ? "png" : blob.type === "image/webp" ? "webp" : blob.type === "image/gif" ? "gif" : "jpg";
+    var base = (file.name || "image").replace(/\.[^.]+$/, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 40);
+    return Date.now().toString(36) + (base ? "-" + base : "") + "." + ext;
+  }
+  // The admin code talks to a db/assets pair; a remote keeps the whole portfolio in memory and
+  // writes it back as one file. Edits made close together (like a reorder) share one save.
+  function makeRemote(kind, writeData, writeImage) {
+    var r = { kind: kind, local: {}, pending: null };
+    r.commitData = function () {
+      if (!r.pending) {
+        r.pending = new Promise(function (resolve, reject) {
+          setTimeout(function () { r.pending = null; writeData(exportJSON() + "\n").then(resolve, reject); }, 400);
         });
       }
-      return gh.pending;
+      return r.pending;
     };
     function at(id) { return state.projects.findIndex(function (p) { return p.id === id; }); }
-    function changed() { refresh(); return gh.commitData(); }
-    gh.db = {
+    function changed() { refresh(); return r.commitData(); }
+    r.db = {
       collection: function () {
         return {
           doc: function (id) {
@@ -1086,40 +1082,123 @@ img { max-width: 100%; display: block; }
       },
       doc: function () { return { set: function (s) { state.site = clone(s); return changed(); } }; }
     };
-    gh.assets = {
+    r.assets = {
       upload: function (file) {
         if (file.size > 20 * 1024 * 1024) return Promise.reject({ code: "too_large" });
         return shrink(file).then(function (blob) {
-          var ext = blob.type === "image/png" ? "png" : blob.type === "image/webp" ? "webp" : blob.type === "image/gif" ? "gif" : "jpg";
-          var base = (file.name || "image").replace(/\.[^.]+$/, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 40);
-          var path = "images/" + Date.now().toString(36) + (base ? "-" + base : "") + "." + ext;
-          return blob.arrayBuffer().then(function (buf) {
-            return gh.putFile(path, toB64(new Uint8Array(buf)), "Add image " + path);
-          }).then(function () {
-            // Pages takes a minute to publish the file; show the local copy until then.
-            gh.local[path] = URL.createObjectURL(blob);
+          return writeImage(blob, imageName(file, blob)).then(function (path) {
+            // The published copy can lag (GitHub Pages needs a deploy); show the local one meanwhile.
+            r.local[path] = URL.createObjectURL(blob);
             return { id: path };
           });
         });
       },
       delete: function () { return Promise.resolve(); }
     };
-    return gh;
+    return r;
   }
-  function ghLogin(token) {
-    var gh = makeGitHub(token);
-    return gh.req("GET", "").then(function (repo) {
-      gh.branch = repo.default_branch;
-      return gh.req("GET", "/contents/" + DATA_URL + "?ref=" + encodeURIComponent(gh.branch));
-    }).then(function (f) {
-      // Edit the committed file rather than the published copy, which can lag behind by a deploy.
-      var data = JSON.parse(fromB64(f.content));
-      state.gh = gh; state.db = gh.db; state.assets = gh.assets; state.canEdit = true;
-      state.source = "db"; state.jsonData = data; state.siteFromDb = true;
-      state.site = data.site || {};
-      state.projects = (data.projects || []).map(function (p, i) { var o = clone(p); o.id = o.slug || "p-" + i; o.order = i; return o; });
-      $("admin-link").hidden = false;
-      refresh(); renderAdmin();
+  function useRemote(r, data) {
+    state.remote = r; state.db = r.db; state.assets = r.assets; state.canEdit = true;
+    state.source = "db"; state.jsonData = data; state.siteFromDb = true;
+    state.site = data.site || {};
+    state.projects = (data.projects || []).map(function (p, i) { var o = clone(p); o.id = o.slug || "p-" + i; o.order = i; return o; });
+    $("admin-link").hidden = false;
+    refresh(); renderAdmin();
+  }
+
+  /* PHP host (Cafe24 and the like) */
+  function phpCall(action, opts) {
+    opts = opts || {};
+    var headers = { Accept: "application/json" };
+    if (state.csrf) headers["X-CSRF-Token"] = state.csrf;
+    if (opts.json !== undefined) headers["Content-Type"] = "application/json";
+    return fetch(API_URL + "?action=" + action, {
+      method: opts.method || "GET", credentials: "same-origin", cache: "no-store", headers: headers,
+      body: opts.json !== undefined ? JSON.stringify(opts.json) : opts.form
+    }).then(function (res) {
+      return res.json().catch(function () { return {}; }).then(function (body) {
+        if (!res.ok || !body.ok) { var e = new Error("api " + res.status); e.status = res.status; e.code = body.error; throw e; }
+        return body;
+      });
+    });
+  }
+  function makePhpRemote() {
+    return makeRemote("php",
+      function (text) { return phpCall("save", { method: "POST", json: JSON.parse(text) }); },
+      function (blob, name) {
+        var fd = new FormData(); fd.append("file", blob, name);
+        return phpCall("upload", { method: "POST", form: fd }).then(function (b) { return b.path; });
+      });
+  }
+  function phpEnter(body) {
+    state.csrf = body.csrf;
+    return fetch(DATA_URL, { cache: "no-store" }).then(function (r) { return r.json(); })
+      .then(function (data) { useRemote(makePhpRemote(), data); });
+  }
+
+  /* GitHub Pages */
+  function makeGitHub(token) {
+    var api = "https://api.github.com/repos/" + GH_REPO.owner + "/" + GH_REPO.repo;
+    var branch = "", queue = Promise.resolve();
+    function req(method, path, body) {
+      return fetch(api + path, {
+        method: method, cache: "no-store",
+        headers: { Authorization: "Bearer " + token, Accept: "application/vnd.github+json" },
+        body: body ? JSON.stringify(body) : undefined
+      }).then(function (r) {
+        if (!r.ok) { var e = new Error("GitHub " + r.status); e.status = r.status; throw e; }
+        return r.status === 204 ? null : r.json();
+      });
+    }
+    // One write at a time, so two commits never race for the branch head.
+    function putFile(path, b64, message) {
+      var p = queue.then(function () {
+        return req("GET", "/contents/" + path + "?ref=" + encodeURIComponent(branch))
+          .then(function (f) { return f.sha; }, function (e) { if (e.status === 404) return undefined; throw e; })
+          .then(function (sha) { return req("PUT", "/contents/" + path, { message: message, content: b64, branch: branch, sha: sha }); });
+      });
+      queue = p.catch(function () {});
+      return p;
+    }
+    var r = makeRemote("github",
+      function (text) { return putFile(DATA_URL, toB64(new TextEncoder().encode(text)), "Update portfolio from admin"); },
+      function (blob, name) {
+        var path = "images/" + name;
+        return blob.arrayBuffer().then(function (buf) { return putFile(path, toB64(new Uint8Array(buf)), "Add image " + path); })
+          .then(function () { return path; });
+      });
+    r.open = function () {
+      return req("GET", "").then(function (repo) {
+        branch = repo.default_branch;
+        // Edit the committed file rather than the published copy, which can lag behind by a deploy.
+        return req("GET", "/contents/" + DATA_URL + "?ref=" + encodeURIComponent(branch));
+      }).then(function (f) { return JSON.parse(fromB64(f.content)); });
+    };
+    return r;
+  }
+  function remoteLogin(secret) {
+    if (state.remoteKind === "php") return phpCall("login", { method: "POST", json: { password: secret } }).then(phpEnter);
+    var r = makeGitHub(secret);
+    return r.open().then(function (data) { useRemote(r, data); ghSave(secret); });
+  }
+  function remoteLogout() {
+    if (state.remoteKind === "php") return phpCall("logout", { method: "POST" }).catch(function () {});
+    ghSave("");
+    return Promise.resolve();
+  }
+  function detectRemote() {
+    state.remoteKind = "checking";
+    // A PHP host answers the status call; GitHub Pages serves the .php file as plain text instead.
+    return phpCall("status").then(function (body) {
+      state.remoteKind = "php";
+      renderAdmin();
+      if (body.loggedIn) return phpEnter(body);
+    }, function (err) {
+      if (err && err.code) { state.remoteKind = "php"; renderAdmin(); return; }
+      state.remoteKind = "github";
+      renderAdmin();
+      var saved = ghStore();
+      if (saved) return remoteLogin(saved).catch(function (e) { if (e && e.status === 401) ghSave(""); renderAdmin(); });
     });
   }
   // 1) Render from the JSON file right away.
@@ -1169,11 +1248,9 @@ img { max-width: 100%; display: block; }
     claude.use("assets").then(function (a) { state.assets = a; if (state.editing) renderMedia(); });
     claude.use("downloads").then(function (d) { state.downloads = d; });
   } else {
-    // Hosted on its own (e.g. GitHub Pages): the admin saves to the repository after a token login.
+    // Hosted on its own: the admin saves through admin/api.php or the GitHub API after a login.
     state.userKnown = true;
-    state.ghMode = true;
-    var saved = ghStore();
-    if (saved) ghLogin(saved).catch(function (err) { if (err && err.status === 401) ghSave(""); renderAdmin(); });
+    detectRemote();
   }
   route();
 })();
